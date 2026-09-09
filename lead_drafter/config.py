@@ -15,9 +15,10 @@ except ImportError:
 
 @dataclass
 class Config:
-    llm_provider: str = os.getenv("LLM_PROVIDER", "openai")  # "openai" or "anthropic"
+    llm_provider: str = os.getenv("LLM_PROVIDER", "openai")  # "openai", "anthropic", or "gemini"
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
+    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
     llm_model: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
     google_sheets_creds_path: str = os.getenv("GOOGLE_SHEETS_CREDS_PATH", "credentials.json")
     google_sheet_id: str = os.getenv("GOOGLE_SHEET_ID", "")
@@ -29,6 +30,8 @@ class Config:
             missing.append("OPENAI_API_KEY")
         if self.llm_provider == "anthropic" and not self.anthropic_api_key:
             missing.append("ANTHROPIC_API_KEY")
+        if self.llm_provider == "gemini" and not self.gemini_api_key:
+            missing.append("GEMINI_API_KEY")
         if not self.google_sheet_id:
             missing.append("GOOGLE_SHEET_ID")
         if missing:

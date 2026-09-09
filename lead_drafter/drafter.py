@@ -72,6 +72,25 @@ def _call_anthropic(lead_data: dict) -> dict:
     return json.loads(text)
 
 
+def _call_gemini(lead_data: dict) -> dict:
+    from google import genai
+    from google.genai import types
+    client = genai.Client(api_key=config.gemini_api_key)
+    resp = client.models.generate_content(
+        model=config.llm_model,
+        contents=f"Lead data:\n{json.dumps(lead_data, indent=2)}",
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            response_mime_type="application/json",
+            temperature=0.4,
+        ),
+    )
+    text = resp.text.strip()
+    # Same defensive fence-stripping as the Anthropic path, just in case
+    text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    return json.loads(text)
+
+
 def draft_outreach(lead_data: dict) -> dict:
     """
     Takes a lead dict (name, context fields, etc.) and returns:
@@ -86,6 +105,8 @@ def draft_outreach(lead_data: dict) -> dict:
     try:
         if config.llm_provider == "anthropic":
             result = _call_anthropic(lead_data)
+        elif config.llm_provider == "gemini":
+            result = _call_gemini(lead_data)
         else:
             result = _call_openai(lead_data)
     except json.JSONDecodeError as e:
