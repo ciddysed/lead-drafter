@@ -42,11 +42,33 @@ def list_pending_leads() -> list[dict]:
     return [l for l in leads if str(l["lead_id"]) not in drafted_ids]
 
 
+def _ensure_drafts_header(ws):
+    """
+    Make sure row 1 is exactly DRAFTS_HEADER before any data row is appended.
+
+    Checking "is the sheet empty?" (e.g. get_all_values() == []) to decide
+    whether to write the header is fragile — a freshly created Google Sheets
+    tab isn't always byte-empty (stray formatting/whitespace from tab
+    creation), so that check can silently evaluate false on the very first
+    real write and leave every subsequent row without a header at all.
+    Checking row 1's actual content directly is the reliable version.
+    """
+    first_row = ws.row_values(1)
+    if first_row == DRAFTS_HEADER:
+        return
+    if first_row:
+        # Row 1 has content but it's not our header — a data row already
+        # landed there (the original bug's failure mode). Push it down
+        # rather than overwrite it.
+        ws.insert_row(DRAFTS_HEADER, 1)
+    else:
+        ws.append_row(DRAFTS_HEADER)
+
+
 def log_draft(lead_id: str, result: dict):
     sh = _client()
     ws = sh.worksheet("Drafts")
-    if ws.row_count == 0 or ws.get_all_values() == []:
-        ws.append_row(DRAFTS_HEADER)
+    _ensure_drafts_header(ws)
     status = "pending_review" if result.get("needs_review") else "approved"
     ws.append_row([
         lead_id,
