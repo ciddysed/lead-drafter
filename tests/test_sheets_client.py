@@ -24,8 +24,9 @@ class FakeWorksheet:
         self.inserted = (values, index)
         self._rows.insert(index - 1, values)
 
-    def append_row(self, values):
+    def append_row(self, values, table_range=None):
         self.appended = values
+        self.append_table_range = table_range
         self._rows.append(values)
 
 

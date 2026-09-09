@@ -62,7 +62,7 @@ def _ensure_drafts_header(ws):
         # rather than overwrite it.
         ws.insert_row(DRAFTS_HEADER, 1)
     else:
-        ws.append_row(DRAFTS_HEADER)
+        ws.append_row(DRAFTS_HEADER, table_range="A1")
 
 
 def log_draft(lead_id: str, result: dict):
@@ -70,6 +70,11 @@ def log_draft(lead_id: str, result: dict):
     ws = sh.worksheet("Drafts")
     _ensure_drafts_header(ws)
     status = "pending_review" if result.get("needs_review") else "approved"
+    # table_range="A1" pins the append to start at column A. Without it,
+    # the Sheets API auto-detects "the table" to append below, and once a
+    # sheet has inconsistently-shaped rows (as ours briefly did from the
+    # header bug above), that guess can drift — real rows were observed
+    # landing 6 columns to the right of A on this project's first live run.
     ws.append_row([
         lead_id,
         datetime.now(timezone.utc).isoformat(),
@@ -79,7 +84,7 @@ def log_draft(lead_id: str, result: dict):
         "; ".join(result.get("flags", [])),
         result.get("reasoning", ""),
         status,
-    ])
+    ], table_range="A1")
 
 
 def update_draft_status(lead_id: str, new_status: str):
