@@ -17,6 +17,13 @@ from lead_drafter.config import config
 from lead_drafter.drafter import draft_outreach
 from lead_drafter import sheets_client as sheets
 
+# Windows terminals default to the cp1252 codepage, which can't encode
+# lead data containing non-ASCII text (e.g. TC07's Vietnamese context) --
+# print() would crash mid-run instead of just showing that lead's draft.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 
 def cmd_draft_new():
     config.validate()

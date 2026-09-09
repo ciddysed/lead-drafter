@@ -33,7 +33,7 @@ FIELDS = [
 
 def run():
     config.validate()
-    cases = json.loads(TEST_CASES_PATH.read_text())
+    cases = json.loads(TEST_CASES_PATH.read_text(encoding="utf-8"))
     rows = []
 
     for case in cases:
@@ -70,7 +70,7 @@ def run():
         rows.append(row)
         time.sleep(1)  # light rate-limit courtesy, not a robustness feature
 
-    with open(RESULTS_PATH, "w", newline="") as f:
+    with open(RESULTS_PATH, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(rows)
