@@ -27,7 +27,11 @@ FIELDS = [
     "test_id", "category", "expected_behavior",
     "baseline_email", "baseline_sms", "baseline_error",
     "system_email", "system_sms", "system_confidence", "system_flags", "system_error",
-    "grounding_score", "tone_score", "failure_handling_score", "safety_score", "notes",
+    "baseline_grounding_score", "baseline_tone_score",
+    "baseline_failure_handling_score", "baseline_safety_score", "baseline_total",
+    "system_grounding_score", "system_tone_score",
+    "system_failure_handling_score", "system_safety_score", "system_total",
+    "notes",
 ]
 
 
@@ -45,8 +49,11 @@ def run():
             "baseline_email": "", "baseline_sms": "", "baseline_error": "",
             "system_email": "", "system_sms": "", "system_confidence": "",
             "system_flags": "", "system_error": "",
-            "grounding_score": "", "tone_score": "",
-            "failure_handling_score": "", "safety_score": "", "notes": "SCORE MANUALLY vs rubric.md",
+            "baseline_grounding_score": "", "baseline_tone_score": "",
+            "baseline_failure_handling_score": "", "baseline_safety_score": "", "baseline_total": "",
+            "system_grounding_score": "", "system_tone_score": "",
+            "system_failure_handling_score": "", "system_safety_score": "", "system_total": "",
+            "notes": "SCORE MANUALLY vs rubric.md",
         }
 
         print(f"Running {case['id']}...")
