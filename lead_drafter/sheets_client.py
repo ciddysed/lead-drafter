@@ -1,0 +1,77 @@
+"""
+Google Sheets acts as our lightweight "CRM" for this project — a real,
+external system of record, not a mocked database. Two tabs expected:
+
+  "Leads"   — columns: lead_id | name | context | contact_email | contact_sms
+  "Drafts"  — columns: lead_id | timestamp | email_draft | sms_draft |
+                        confidence | flags | status
+
+status values: "pending_review" | "approved" | "rejected" | "sent"
+"""
+import gspread
+from datetime import datetime, timezone
+from lead_drafter.config import config
+
+DRAFTS_HEADER = [
+    "lead_id", "timestamp", "email_draft", "sms_draft",
+    "confidence", "flags", "reasoning", "status",
+]
+
+
+def _client():
+    gc = gspread.service_account(filename=config.google_sheets_creds_path)
+    return gc.open_by_key(config.google_sheet_id)
+
+
+def get_lead(lead_id: str) -> dict:
+    sh = _client()
+    ws = sh.worksheet("Leads")
+    records = ws.get_all_records()
+    for r in records:
+        if str(r.get("lead_id")) == str(lead_id):
+            return r
+    raise KeyError(f"No lead found with lead_id={lead_id}")
+
+
+def list_pending_leads() -> list[dict]:
+    """Leads that don't have a draft logged yet."""
+    sh = _client()
+    leads = sh.worksheet("Leads").get_all_records()
+    drafts = sh.worksheet("Drafts").get_all_records()
+    drafted_ids = {str(d["lead_id"]) for d in drafts}
+    return [l for l in leads if str(l["lead_id"]) not in drafted_ids]
+
+
+def log_draft(lead_id: str, result: dict):
+    sh = _client()
+    ws = sh.worksheet("Drafts")
+    if ws.row_count == 0 or ws.get_all_values() == []:
+        ws.append_row(DRAFTS_HEADER)
+    status = "pending_review" if result.get("needs_review") else "approved"
+    ws.append_row([
+        lead_id,
+        datetime.now(timezone.utc).isoformat(),
+        result.get("email_draft", ""),
+        result.get("sms_draft", ""),
+        result.get("confidence", 0.0),
+        "; ".join(result.get("flags", [])),
+        result.get("reasoning", ""),
+        status,
+    ])
+
+
+def update_draft_status(lead_id: str, new_status: str):
+    sh = _client()
+    ws = sh.worksheet("Drafts")
+    cell = ws.find(str(lead_id))
+    if not cell:
+        raise KeyError(f"No draft row found for lead_id={lead_id}")
+    header = ws.row_values(1)
+    status_col = header.index("status") + 1
+    ws.update_cell(cell.row, status_col, new_status)
+
+
+def list_pending_review() -> list[dict]:
+    sh = _client()
+    drafts = sh.worksheet("Drafts").get_all_records()
+    return [d for d in drafts if d.get("status") == "pending_review"]

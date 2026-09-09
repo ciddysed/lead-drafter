@@ -1,0 +1,41 @@
+name: Draft outreach for new leads
+
+# Runs automatically on a schedule, and can also be triggered manually
+# from the Actions tab for testing/demo purposes.
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes (GitHub's minimum interval) — good for demo visibility
+  workflow_dispatch: {}     # lets you click "Run workflow" manually in GitHub UI
+
+jobs:
+  draft-new-leads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore Google service account credentials
+        run: echo "${{ secrets.GOOGLE_CREDENTIALS_B64 }}" | base64 -d > credentials.json
+
+      - name: Run drafter for any new leads
+        env:
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          GOOGLE_SHEETS_CREDS_PATH: credentials.json
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          REVIEW_CONFIDENCE_THRESHOLD: "0.75"
+        run: python -m lead_drafter.cli draft-new
+
+      - name: Clean up credentials file
+        if: always()
+        run: rm -f credentials.json
