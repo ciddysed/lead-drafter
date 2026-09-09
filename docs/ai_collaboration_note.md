@@ -6,9 +6,11 @@
   and planning partner: scoping the problem down from an initial over-broad
   idea, drafting the Python code structure, writing the test case set, and
   drafting this documentation set.
-- **[OpenAI/Anthropic API — whichever you use]** — the actual production
+- **Google Gemini API** (`gemini-3.5-flash-lite`) — the actual production
   system under test: the `drafter.py` module calls this API to generate
-  the outreach drafts being evaluated.
+  the outreach drafts being evaluated. Picked over OpenAI/Anthropic
+  specifically for a workable free tier — `drafter.py` and `baseline.py`
+  also support OpenAI/Anthropic as alternate providers if needed.
 
 ## Work delegated to AI (Claude)
 
@@ -23,22 +25,32 @@
 
 ## How I verified AI-generated results
 
-- [Fill in once you've actually run it: e.g. "Ran the full test suite
-  against my own OpenAI key and manually read every one of the 12 draft
-  outputs against the rubric before recording scores — did not trust the
-  model's self-reported confidence score as ground truth, cross-checked
-  it against my own read of each draft."]
-- Reviewed every line of generated code for logic I could personally
-  explain — e.g. why the confidence threshold routes to review, why the
-  hard-stop guard exists in `draft_outreach()`, why JSON output was chosen
-  over free text.
+- Ran the full eval against my own real Gemini key and Google Sheet, then
+  hand-scored all 12 draft outputs against `evaluation/rubric.md` myself —
+  reading the actual email/SMS text and matching it to the rubric's
+  specific 0/1/2 wording, not going by gut feel or accepting Claude's
+  first proposed score.
+- Did not trust the model's self-reported confidence or flags at face
+  value: when NC02 (emoji-only context) flagged "Contact SMS is provided
+  as a numeric value rather than a formatted string," I had that checked
+  against the actual input (`+15551110002`, a normally formatted number)
+  and confirmed the flag itself was factually wrong — a reminder that
+  even the system's own flags can contain incorrect reasoning, not just
+  its drafts.
+- Personally ran the real CLI commands (`draft-new`, `review`) myself
+  against the live sheet, rather than only reviewing Claude's runs, to
+  get genuine non-developer-execution evidence.
 
 ## Important results I rejected or manually corrected
 
-- [Fill in based on your actual Day 2-4 work — e.g. if Claude's first
-  version of the system prompt didn't explicitly forbid inventing details
-  and you caught a hallucination in testing, or if a first-draft test case
-  wasn't actually a meaningful edge case and you replaced it.]
+- My own first-pass rubric score for TC04 (a lead with zero data at all)
+  gave the baseline all 2s. After re-reading the actual baseline output —
+  it drafted a full, polished-sounding pitch for a lead with no name, no
+  context, and no contact info whatsoever — I corrected that to 3/8
+  (Grounding=0, Failure Handling=0), since a draft fabricated from
+  literally nothing shouldn't score as if nothing went wrong.
+- Confirmed the NC02 flag-accuracy issue above by checking the raw input
+  data directly rather than accepting the system's own flag text as true.
 
 ## Core decisions I personally owned
 
@@ -51,6 +63,14 @@
 - The decision to use fully synthetic data and freshly written code
   throughout, to avoid any IP conflict with a real system I've worked on
   professionally.
-- [Add any specific judgment calls you made during the actual build that
-  Claude didn't decide for you — API provider choice, confidence threshold
-  number, which test cases to prioritize fixing first on Day 4, etc.]
+- Choosing Google Gemini as the LLM provider, specifically for a workable
+  free tier over OpenAI/Anthropic's paid-only APIs.
+- Requiring a branch → tests → PR → green CI → merge workflow (with
+  branch protection actually enforcing it) for every change to this repo,
+  including my own — not just documentation, an enforced rule.
+- Confirming the "surplus fund recovery" outreach scenario is a fair,
+  generic description of my real professional domain rather than
+  something that crosses into actual employer-specific business logic.
+- Prioritizing "add retry/backoff to the live CLI" as the top item in the
+  next two-week iteration plan, based on hitting a real transient API
+  failure (a live `503`) during actual testing, not a hypothetical.
