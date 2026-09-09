@@ -37,6 +37,16 @@ def cmd_draft_new():
         except RuntimeError as e:
             print(f"  ERROR — {e}\n")
             continue
+        except Exception as e:
+            # Catches transient provider errors (rate limits, 503s, network
+            # blips) that aren't ValueError/RuntimeError — one lead's API
+            # failure logs and moves on instead of crashing the whole batch
+            # and silently dropping every lead still queued behind it.
+            # No retry/backoff here by design (documented limitation,
+            # see runbook.md) — re-run draft-new to pick this lead back up,
+            # since it's still "pending" (no draft was logged for it).
+            print(f"  ERROR — {type(e).__name__}: {e}\n")
+            continue
 
         sheets.log_draft(lead_id, result)
         status = "NEEDS REVIEW" if result["needs_review"] else "auto-approved"
