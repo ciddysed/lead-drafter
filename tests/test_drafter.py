@@ -84,6 +84,35 @@ def test_non_json_response_raises_runtime_error(monkeypatch):
 
 
 @patch("lead_drafter.drafter._call_openai")
+def test_explicit_opt_out_hard_stops_before_calling_llm(mock_call, monkeypatch):
+    monkeypatch.setattr(config, "llm_provider", "openai")
+    lead = {"name": "Jordan Lee", "context": "Please stop contacting me and remove me from your list."}
+
+    result = drafter.draft_outreach(lead)
+
+    mock_call.assert_not_called()  # must never reach the LLM for this
+    assert result["email_draft"] == ""
+    assert result["sms_draft"] == ""
+    assert result["confidence"] == 0.0
+    assert result["needs_review"] is True
+    assert len(result["flags"]) > 0
+
+
+@pytest.mark.parametrize("phrase", [
+    "unsubscribe me please",
+    "Do not call this number again",
+    "take me off your list",
+    "I don't want to be contacted anymore, opt-out",
+])
+@patch("lead_drafter.drafter._call_openai")
+def test_various_opt_out_phrasings_all_hard_stop(mock_call, monkeypatch, phrase):
+    monkeypatch.setattr(config, "llm_provider", "openai")
+    result = drafter.draft_outreach({"name": "Test Lead", "context": phrase})
+    mock_call.assert_not_called()
+    assert result["email_draft"] == ""
+
+
+@patch("lead_drafter.drafter._call_openai")
 def test_default_provider_is_openai(mock_call, monkeypatch):
     monkeypatch.setattr(config, "llm_provider", "some-unrecognized-value")
     mock_call.return_value = {

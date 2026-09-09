@@ -14,6 +14,7 @@ Run: python -m evaluation.run_eval
 """
 import json
 import csv
+import re
 import time
 from pathlib import Path
 from lead_drafter.config import config
@@ -22,6 +23,28 @@ from evaluation.baseline import draft_naive
 
 TEST_CASES_PATH = Path(__file__).parent.parent / "tests" / "test_cases.json"
 RESULTS_PATH = Path(__file__).parent / "results.csv"
+
+
+def _call_with_retry(fn, lead, max_retries=3):
+    """
+    Retry on a provider rate-limit error (e.g. Gemini free tier's
+    15-requests/minute cap) with backoff, since a full 12-case eval run
+    (24 calls) easily exceeds a per-minute limit that individual live
+    usage rarely would. Anything else (a real bug) raises immediately --
+    this is specifically for "the request was fine, just too soon."
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            return fn(lead)
+        except Exception as e:
+            msg = str(e)
+            is_rate_limit = "RESOURCE_EXHAUSTED" in msg or "429" in msg
+            if not is_rate_limit or attempt == max_retries:
+                raise
+            match = re.search(r"retryDelay['\"]?:\s*['\"]?(\d+)s", msg)
+            delay = int(match.group(1)) + 3 if match else (attempt + 1) * 15
+            print(f"  Rate limited, waiting {delay}s before retry {attempt + 1}/{max_retries}...")
+            time.sleep(delay)
 
 FIELDS = [
     "test_id", "category", "expected_behavior",
@@ -59,14 +82,14 @@ def run():
         print(f"Running {case['id']}...")
 
         try:
-            b = draft_naive(lead)
+            b = _call_with_retry(draft_naive, lead)
             row["baseline_email"] = b.get("email_draft", "")
             row["baseline_sms"] = b.get("sms_draft", "")
         except Exception as e:
             row["baseline_error"] = str(e)
 
         try:
-            s = draft_outreach(lead)
+            s = _call_with_retry(draft_outreach, lead)
             row["system_email"] = s.get("email_draft", "")
             row["system_sms"] = s.get("sms_draft", "")
             row["system_confidence"] = s.get("confidence", "")
@@ -75,7 +98,7 @@ def run():
             row["system_error"] = str(e)
 
         rows.append(row)
-        time.sleep(1)  # light rate-limit courtesy, not a robustness feature
+        time.sleep(4)  # stay under free-tier per-minute limits (e.g. 15 rpm)
 
     with open(RESULTS_PATH, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
