@@ -26,6 +26,18 @@ def draft_naive(lead_data: dict) -> dict:
         text = resp.content[0].text.strip()
         text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return json.loads(text)
+    elif config.llm_provider == "gemini":
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=config.gemini_api_key)
+        resp = client.models.generate_content(
+            model=config.llm_model,
+            contents=f"{NAIVE_PROMPT}\n\nLead: {json.dumps(lead_data)}",
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        text = resp.text.strip()
+        text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        return json.loads(text)
     else:
         from openai import OpenAI
         client = OpenAI(api_key=config.openai_api_key)
