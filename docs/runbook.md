@@ -25,22 +25,27 @@
 
 ## Running it live on a schedule (GitHub Actions)
 
-The workflow at `.github/workflows/draft-leads.yml` runs `draft-new`
-automatically every hour (adjust the cron schedule as needed), and can
-also be triggered manually from the repo's Actions tab.
+The workflow at `.github/workflows/draft-leads.yml` runs `draft-new` when
+manually triggered from the repo's Actions tab ("Run workflow" button).
+It's deliberately manual-only, not on an automatic schedule — an
+unattended schedule would keep consuming the LLM provider's free-tier
+quota (a real limit hit twice during this project's own development: a
+20-requests/day cap on one model, and a 15-requests/minute cap on
+another) for runs that mostly just find "no new leads" anyway.
 
 Setup, in your GitHub repo settings → Secrets and variables → Actions:
 
 1. Add these repository secrets:
-   - `LLM_PROVIDER` — `openai` or `anthropic`
-   - `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY`
+   - `LLM_PROVIDER` — `openai`, `anthropic`, or `gemini`
+   - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and/or `GEMINI_API_KEY`
+     (only the one matching `LLM_PROVIDER` needs a real value)
    - `LLM_MODEL`
    - `GOOGLE_SHEET_ID`
    - `GOOGLE_CREDENTIALS_B64` — your `credentials.json`, base64-encoded
      (run `base64 -i credentials.json | tr -d '\n'` locally and paste the
      output as the secret value — never commit the raw file)
-2. Push to GitHub. The schedule starts automatically; you can also click
-   "Run workflow" on the Actions tab to trigger it immediately for a demo.
+2. Push to GitHub, then click "Run workflow" on the Actions tab whenever
+   there are new leads to draft, including for the demo.
 3. Check the Actions tab's run logs to see what happened on each run —
    this is your production monitoring/logging for this workflow.
 

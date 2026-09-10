@@ -25,6 +25,21 @@ def test_raises_without_name_or_context():
         drafter.draft_outreach({})
 
 
+def test_sender_identity_included_when_configured(monkeypatch):
+    monkeypatch.setattr(config, "company_name", "Acme Recovery Co")
+    monkeypatch.setattr(config, "sender_name", "Sam Rivera")
+    content = drafter._build_user_content(SAMPLE_LEAD)
+    assert "Acme Recovery Co" in content
+    assert "Sam Rivera" in content
+
+
+def test_sender_identity_omitted_when_not_configured(monkeypatch):
+    monkeypatch.setattr(config, "company_name", "")
+    monkeypatch.setattr(config, "sender_name", "")
+    content = drafter._build_user_content(SAMPLE_LEAD)
+    assert "Sender identity" not in content
+
+
 @patch("lead_drafter.drafter._call_openai")
 def test_low_confidence_triggers_review(mock_call, monkeypatch):
     monkeypatch.setattr(config, "llm_provider", "openai")
@@ -115,8 +130,78 @@ def test_various_opt_out_phrasings_all_hard_stop(mock_call, monkeypatch, phrase)
 @patch("lead_drafter.drafter._call_openai")
 def test_default_provider_is_openai(mock_call, monkeypatch):
     monkeypatch.setattr(config, "llm_provider", "some-unrecognized-value")
+    # confidence below threshold -> needs_review True already, so the
+    # verification pass is skipped and this stays a clean single-call test
+    # of provider dispatch specifically (verification behavior has its own
+    # tests below).
     mock_call.return_value = {
-        "email_draft": "...", "sms_draft": "...", "confidence": 0.8, "flags": [],
+        "email_draft": "...", "sms_draft": "...", "confidence": 0.5, "flags": [],
     }
     drafter.draft_outreach(SAMPLE_LEAD)
     mock_call.assert_called_once()
+
+
+@patch("lead_drafter.drafter._call_openai")
+def test_verification_runs_on_high_confidence_and_catches_hallucination(mock_call, monkeypatch):
+    monkeypatch.setattr(config, "llm_provider", "openai")
+    draft = {
+        "email_draft": "Hi Jordan, we operate on a contingency basis...",
+        "sms_draft": "Hi Jordan, ...",
+        "confidence": 0.95,
+        "flags": [],
+        "reasoning": "Looked complete.",
+    }
+    verification = {
+        "hallucination_detected": True,
+        "unsupported_claims": ["\"contingency basis\" fee structure not present in lead data"],
+        "reasoning": "Draft states a fee structure not in the input.",
+    }
+    mock_call.side_effect = [draft, verification]
+
+    result = drafter.draft_outreach(SAMPLE_LEAD)
+
+    assert mock_call.call_count == 2  # draft call, then independent verification call
+    assert result["needs_review"] is True  # overridden despite high initial confidence
+    assert any("contingency basis" in f for f in result["flags"])
+
+
+@patch("lead_drafter.drafter._call_openai")
+def test_verification_confirms_clean_draft_stays_auto_approved(mock_call, monkeypatch):
+    monkeypatch.setattr(config, "llm_provider", "openai")
+    draft = {
+        "email_draft": "Hi Jordan, ...", "sms_draft": "Hi Jordan, ...",
+        "confidence": 0.95, "flags": [], "reasoning": "Clear data.",
+    }
+    verification = {"hallucination_detected": False, "unsupported_claims": [], "reasoning": "All claims grounded."}
+    mock_call.side_effect = [draft, verification]
+
+    result = drafter.draft_outreach(SAMPLE_LEAD)
+
+    assert mock_call.call_count == 2
+    assert result["needs_review"] is False
+
+
+@patch("lead_drafter.drafter._call_openai")
+def test_verification_skipped_when_already_needs_review(mock_call, monkeypatch):
+    monkeypatch.setattr(config, "llm_provider", "openai")
+    # Low confidence already forces review -- the extra API call would be
+    # wasted, since the outcome (needs_review=True) can't change.
+    mock_call.return_value = {
+        "email_draft": "...", "sms_draft": "...", "confidence": 0.3, "flags": [],
+    }
+    drafter.draft_outreach(SAMPLE_LEAD)
+    mock_call.assert_called_once()
+
+
+@patch("lead_drafter.drafter._call_openai")
+def test_verification_call_failure_falls_back_gracefully(mock_call, monkeypatch):
+    monkeypatch.setattr(config, "llm_provider", "openai")
+    draft = {
+        "email_draft": "...", "sms_draft": "...",
+        "confidence": 0.95, "flags": [], "reasoning": "Looked fine.",
+    }
+    mock_call.side_effect = [draft, RuntimeError("verification API call failed")]
+
+    result = drafter.draft_outreach(SAMPLE_LEAD)  # must not raise
+
+    assert result["needs_review"] is False  # falls back to the original assessment

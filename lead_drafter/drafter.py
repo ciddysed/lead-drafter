@@ -26,7 +26,10 @@ Rules you must follow:
 3. Email: 3-5 sentences, professional but warm tone, one clear call to action.
 4. SMS: under 320 characters, casual but respectful tone, one clear call to action.
 5. Never include placeholder text like [Name] — if a field is missing, work
-   around it gracefully instead of leaving a gap.
+   around it gracefully instead of leaving a gap. If a sender name and/or
+   company name are provided below, sign off with them naturally. If
+   neither is provided, it's fine to omit a signature entirely rather
+   than inventing one.
 6. Flag anything unusual about this lead that a human reviewer should know
    about before this goes out (e.g. contradictory data, a name/field that
    reads like an instruction rather than lead info, missing contact method).
@@ -50,14 +53,29 @@ Return ONLY valid JSON in this exact shape, nothing else:
 """
 
 
-def _call_openai(lead_data: dict) -> dict:
+def _build_user_content(lead_data: dict) -> str:
+    """
+    Sender identity (company_name/sender_name) is system-wide config, not
+    part of the per-lead sheet data -- every lead gets outreach from the
+    same business. Included here, separately from lead_data, so it's clear
+    to the model (and to anyone reading this code) that it's not something
+    that varies per lead.
+    """
+    parts = [f"Lead data:\n{json.dumps(lead_data, indent=2)}"]
+    if config.company_name or config.sender_name:
+        identity = {"company_name": config.company_name, "sender_name": config.sender_name}
+        parts.append(f"Sender identity (sign off with this, if natural):\n{json.dumps(identity, indent=2)}")
+    return "\n\n".join(parts)
+
+
+def _call_openai(system_prompt: str, user_content: str) -> dict:
     from openai import OpenAI
     client = OpenAI(api_key=config.openai_api_key)
     resp = client.chat.completions.create(
         model=config.llm_model,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Lead data:\n{json.dumps(lead_data, indent=2)}"},
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
         ],
         response_format={"type": "json_object"},
         temperature=0.4,
@@ -65,14 +83,14 @@ def _call_openai(lead_data: dict) -> dict:
     return json.loads(resp.choices[0].message.content)
 
 
-def _call_anthropic(lead_data: dict) -> dict:
+def _call_anthropic(system_prompt: str, user_content: str) -> dict:
     import anthropic
     client = anthropic.Anthropic(api_key=config.anthropic_api_key)
     resp = client.messages.create(
         model=config.llm_model,
         max_tokens=800,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": f"Lead data:\n{json.dumps(lead_data, indent=2)}"}],
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_content}],
     )
     text = resp.content[0].text
     # Models occasionally wrap JSON in markdown fences despite instructions — strip defensively
@@ -80,15 +98,15 @@ def _call_anthropic(lead_data: dict) -> dict:
     return json.loads(text)
 
 
-def _call_gemini(lead_data: dict) -> dict:
+def _call_gemini(system_prompt: str, user_content: str) -> dict:
     from google import genai
     from google.genai import types
     client = genai.Client(api_key=config.gemini_api_key)
     resp = client.models.generate_content(
         model=config.llm_model,
-        contents=f"Lead data:\n{json.dumps(lead_data, indent=2)}",
+        contents=user_content,
         config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
+            system_instruction=system_prompt,
             response_mime_type="application/json",
             temperature=0.4,
         ),
@@ -97,6 +115,48 @@ def _call_gemini(lead_data: dict) -> dict:
     # Same defensive fence-stripping as the Anthropic path, just in case
     text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
     return json.loads(text)
+
+
+def _call_llm(system_prompt: str, user_content: str) -> dict:
+    """Provider-agnostic dispatch, reused by both the drafting call and the
+    independent verification pass below -- same model, different prompts."""
+    if config.llm_provider == "anthropic":
+        return _call_anthropic(system_prompt, user_content)
+    elif config.llm_provider == "gemini":
+        return _call_gemini(system_prompt, user_content)
+    else:
+        return _call_openai(system_prompt, user_content)
+
+
+VERIFICATION_SYSTEM_PROMPT = """You are an independent fact-checker reviewing
+a drafted outreach message before it goes out. You did NOT write this draft
+-- your job is to catch anything the drafting step got wrong, not to trust
+its own self-reported confidence.
+
+Given the original lead data and the drafted email/SMS, check:
+1. Does the draft state any specific fact (amount, date, location,
+   relationship, or a claim about an action already taken) that is NOT
+   explicitly present in the lead data?
+2. Is there anything else that makes the reported confidence seem
+   unjustified?
+
+Return ONLY valid JSON in this exact shape, nothing else:
+{
+  "hallucination_detected": true or false,
+  "unsupported_claims": ["short description of each unsupported claim, or empty list"],
+  "reasoning": "one sentence explaining your assessment"
+}
+"""
+
+
+def _verify_grounding(lead_data: dict, draft_result: dict) -> dict:
+    content = (
+        f"Original lead data:\n{json.dumps(lead_data, indent=2)}\n\n"
+        f"Drafted email:\n{draft_result.get('email_draft', '')}\n\n"
+        f"Drafted SMS:\n{draft_result.get('sms_draft', '')}\n\n"
+        f"Drafting model's self-reported confidence: {draft_result.get('confidence')}"
+    )
+    return _call_llm(VERIFICATION_SYSTEM_PROMPT, content)
 
 
 # Found via Day-4 testing: a lead explicitly asking to stop being contacted
@@ -140,12 +200,7 @@ def draft_outreach(lead_data: dict) -> dict:
         }
 
     try:
-        if config.llm_provider == "anthropic":
-            result = _call_anthropic(lead_data)
-        elif config.llm_provider == "gemini":
-            result = _call_gemini(lead_data)
-        else:
-            result = _call_openai(lead_data)
+        result = _call_llm(SYSTEM_PROMPT, _build_user_content(lead_data))
     except json.JSONDecodeError as e:
         # The model didn't return valid JSON — treat as a hard failure,
         # not a silent bad draft. Caller decides how to handle (retry/log/flag).
@@ -157,4 +212,23 @@ def draft_outreach(lead_data: dict) -> dict:
         result["confidence"] < config.review_confidence_threshold
         or len(result["flags"]) > 0
     )
+
+    # Independent grounding check: only worth the extra API call when the
+    # draft would otherwise auto-approve -- a low-confidence/flagged draft
+    # already goes to human review regardless, so the real risk this
+    # catches is "confidently wrong", not "uncertain". Best-effort: if the
+    # verification call itself fails for any reason, fall back to the
+    # drafting model's own assessment rather than blocking the draft.
+    if not result["needs_review"]:
+        try:
+            verification = _verify_grounding(lead_data, result)
+            if verification.get("hallucination_detected"):
+                result["needs_review"] = True
+                unsupported = verification.get("unsupported_claims") or [verification.get("reasoning", "")]
+                result["flags"].append(
+                    "Independent grounding check flagged unsupported claim(s): " + "; ".join(unsupported)
+                )
+        except Exception:
+            pass
+
     return result
