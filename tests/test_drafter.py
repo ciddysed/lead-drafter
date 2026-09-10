@@ -25,6 +25,21 @@ def test_raises_without_name_or_context():
         drafter.draft_outreach({})
 
 
+def test_sender_identity_included_when_configured(monkeypatch):
+    monkeypatch.setattr(config, "company_name", "Acme Recovery Co")
+    monkeypatch.setattr(config, "sender_name", "Sam Rivera")
+    content = drafter._build_user_content(SAMPLE_LEAD)
+    assert "Acme Recovery Co" in content
+    assert "Sam Rivera" in content
+
+
+def test_sender_identity_omitted_when_not_configured(monkeypatch):
+    monkeypatch.setattr(config, "company_name", "")
+    monkeypatch.setattr(config, "sender_name", "")
+    content = drafter._build_user_content(SAMPLE_LEAD)
+    assert "Sender identity" not in content
+
+
 @patch("lead_drafter.drafter._call_openai")
 def test_low_confidence_triggers_review(mock_call, monkeypatch):
     monkeypatch.setattr(config, "llm_provider", "openai")

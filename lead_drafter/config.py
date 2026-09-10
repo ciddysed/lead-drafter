@@ -23,6 +23,11 @@ class Config:
     google_sheets_creds_path: str = os.getenv("GOOGLE_SHEETS_CREDS_PATH", "credentials.json")
     google_sheet_id: str = os.getenv("GOOGLE_SHEET_ID", "")
     review_confidence_threshold: float = float(os.getenv("REVIEW_CONFIDENCE_THRESHOLD", "0.75"))
+    # Sender identity: the same business/person for every lead, so this is
+    # system-wide config, not a per-lead field in the sheet. Optional --
+    # falls back to signing off with no name, same as before, if left blank.
+    company_name: str = os.getenv("COMPANY_NAME", "")
+    sender_name: str = os.getenv("SENDER_NAME", "")
 
     def validate(self):
         missing = []
