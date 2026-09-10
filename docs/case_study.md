@@ -6,6 +6,16 @@ See `workflow_map.md` for full detail. Short version: a solo rep/small
 business owner manually drafts every new lead's first outreach message,
 which doesn't scale and produces inconsistent quality.
 
+This generalizes beyond this specific niche: the underlying pattern
+(lead record → personalized draft → confidence/flag-based human review
+before anything sends) applies to any business doing individualized
+outbound lead outreach — real estate, recruiting, insurance, B2B sales,
+financial services. Worth being precise about scope here: this is
+**not** a mass-marketing campaign tool (segmented lists, one message to
+thousands, A/B-tested subject lines) — that's a genuinely different
+problem with different economics. What generalizes is the 1:1,
+per-contact personalization-plus-review pattern specifically.
+
 ## Existing workflow and bottleneck
 
 Manual, per-lead message writing — see workflow_map.md's table.
@@ -41,6 +51,14 @@ Manual, per-lead message writing — see workflow_map.md's table.
   by hand against `evaluation/rubric.md`, not by asking an LLM to grade
   its own (or another LLM's) output — avoided introducing a second,
   unvalidated LLM judgment layer into a 5-day scope.
+- **No RAG:** considered and deliberately rejected. RAG solves "there's
+  more relevant knowledge than fits in one prompt, and it changes over
+  time" — this problem doesn't have that shape. The entire "knowledge"
+  needed for any single draft is one row of lead data, which already
+  fits trivially in the prompt; there's no corpus to retrieve from.
+  Building a retrieval pipeline over data with nowhere to retrieve
+  *from* would be unjustified complexity, not more sophisticated
+  engineering.
 
 ## Work delegated to AI and judgment retained by humans
 
@@ -121,10 +139,10 @@ on the `lead-drafter` repo for full detail):
    would crash showing any lead with non-ASCII content, not just the eval
    script.
 
-**2 real design changes**, made in response to Day-4 testing with inputs
+**4 real design changes**, made in response to Day-4 testing with inputs
 not in `test_cases.json` (extremely long context, emoji-only context,
 duplicate names/different lead_ids, an explicit opt-out request, an
-absurd numeric value):
+absurd numeric value, and a fresh new lead added after the fact):
 - **Opt-out hard-stop**: a lead explicitly saying "stop contacting me"
   got a blank draft, but only because the LLM happened to decide that on
   its own — nothing in the code guaranteed it. Added a deterministic
@@ -138,17 +156,45 @@ absurd numeric value):
   must stay internal-only (contradictions, injection attempts, identity/
   ethics ambiguity — confirmed these still never get surfaced to the
   lead directly after the change).
+- **Sender identity config**: every draft up to this point referenced
+  generic "our team"/"we" with no actual business name or signature —
+  the lead schema never included a sender-identity field at all, so the
+  system genuinely had nothing to sign off with. Added `COMPANY_NAME`/
+  `SENDER_NAME` as system-wide config (not a per-lead field, since the
+  sender is the same business for every lead) and threaded it through
+  both the real system and the baseline, keeping the eval comparison
+  fair. Verified against the real API: drafts now naturally sign off
+  with the configured identity instead of generic language.
+- **Independent grounding-verification pass**: a second LLM call (same
+  model, a fact-checker system prompt) reviews the draft against the
+  original lead data specifically for unsupported claims, but only when
+  the draft would otherwise auto-approve — a low-confidence/flagged
+  draft already goes to review regardless, so the value is catching
+  "confidently wrong," not "uncertain." This directly targets the
+  self-reported-confidence limitation below rather than just describing
+  it. Verified against the real API: the check ran, found both
+  regenerated drafts genuinely grounded, and confirmed (rather than
+  just assumed) the original auto-approve decision was correct.
 
 **Verified, not just assumed:** two leads with identical names
 ("Maria Santos") but different `lead_id`s never got conflated by the
 sheet lookup — checked directly rather than taken on faith.
 
 **Known limitations, chosen not to fix in this scope:**
-- **Self-reported confidence is never independently verified.** The
-  entire human-review gate depends on the LLM's own honesty about its
-  confidence score — nothing cross-checks it. This is the single most
-  important limitation to be upfront about: the system's safety net is
-  only as trustworthy as the model's self-assessment.
+- **Self-reported confidence is still not fully independently verified.**
+  The grounding-verification pass above catches unsupported factual
+  claims specifically, but it's a partial mitigation, not a complete
+  fix — it doesn't second-guess tone judgments, flag-worthiness calls,
+  or the confidence *number* itself, and it's only one more LLM call
+  checking another LLM call, not a deterministic ground truth. Still the
+  single most important limitation to be upfront about.
+- **Duplicate `lead_id` rows in the `Leads` tab aren't detected.** Found
+  by accident during Day-4 testing (an accidental double data-entry) —
+  the system drafted the same lead twice instead of flagging the
+  conflict, and `sheets_client.get_lead()` would silently return only
+  the first match if ever called elsewhere. Lower severity than the
+  fixes above (a data-entry mistake, not a compliance or fabrication
+  risk) — documented rather than fixed, given limited remaining time.
 - The production CLI (`draft-new`) still has no retry/backoff on
   transient API errors — it logs and skips (by design, to avoid silently
   hanging or burning quota on retries), but that means a temporary
