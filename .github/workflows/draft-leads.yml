@@ -1,11 +1,12 @@
 name: Draft outreach for new leads
 
-# Runs automatically on a schedule, and can also be triggered manually
-# from the Actions tab for testing/demo purposes.
+# Manual trigger only -- no automatic schedule. An unattended schedule
+# would keep burning the free-tier API quota (already hit twice during
+# development: a 20/day cap and a 15/minute cap) for runs that mostly
+# just find "no new leads" anyway. Click "Run workflow" in the Actions
+# tab whenever there are new leads to draft, including for the demo.
 on:
-  schedule:
-    - cron: "*/5 * * * *"   # every 5 minutes (GitHub's minimum interval) — good for demo visibility
-  workflow_dispatch: {}     # lets you click "Run workflow" manually in GitHub UI
+  workflow_dispatch: {}
 
 jobs:
   draft-new-leads:
@@ -30,6 +31,7 @@ jobs:
           LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
           GOOGLE_SHEETS_CREDS_PATH: credentials.json
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
