@@ -26,7 +26,10 @@ Rules you must follow:
 3. Email: 3-5 sentences, professional but warm tone, one clear call to action.
 4. SMS: under 320 characters, casual but respectful tone, one clear call to action.
 5. Never include placeholder text like [Name] — if a field is missing, work
-   around it gracefully instead of leaving a gap.
+   around it gracefully instead of leaving a gap. If a sender name and/or
+   company name are provided below, sign off with them naturally. If
+   neither is provided, it's fine to omit a signature entirely rather
+   than inventing one.
 6. Flag anything unusual about this lead that a human reviewer should know
    about before this goes out (e.g. contradictory data, a name/field that
    reads like an instruction rather than lead info, missing contact method).
@@ -50,6 +53,21 @@ Return ONLY valid JSON in this exact shape, nothing else:
 """
 
 
+def _build_user_content(lead_data: dict) -> str:
+    """
+    Sender identity (company_name/sender_name) is system-wide config, not
+    part of the per-lead sheet data -- every lead gets outreach from the
+    same business. Included here, separately from lead_data, so it's clear
+    to the model (and to anyone reading this code) that it's not something
+    that varies per lead.
+    """
+    parts = [f"Lead data:\n{json.dumps(lead_data, indent=2)}"]
+    if config.company_name or config.sender_name:
+        identity = {"company_name": config.company_name, "sender_name": config.sender_name}
+        parts.append(f"Sender identity (sign off with this, if natural):\n{json.dumps(identity, indent=2)}")
+    return "\n\n".join(parts)
+
+
 def _call_openai(lead_data: dict) -> dict:
     from openai import OpenAI
     client = OpenAI(api_key=config.openai_api_key)
@@ -57,7 +75,7 @@ def _call_openai(lead_data: dict) -> dict:
         model=config.llm_model,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Lead data:\n{json.dumps(lead_data, indent=2)}"},
+            {"role": "user", "content": _build_user_content(lead_data)},
         ],
         response_format={"type": "json_object"},
         temperature=0.4,
@@ -72,7 +90,7 @@ def _call_anthropic(lead_data: dict) -> dict:
         model=config.llm_model,
         max_tokens=800,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": f"Lead data:\n{json.dumps(lead_data, indent=2)}"}],
+        messages=[{"role": "user", "content": _build_user_content(lead_data)}],
     )
     text = resp.content[0].text
     # Models occasionally wrap JSON in markdown fences despite instructions — strip defensively
@@ -86,7 +104,7 @@ def _call_gemini(lead_data: dict) -> dict:
     client = genai.Client(api_key=config.gemini_api_key)
     resp = client.models.generate_content(
         model=config.llm_model,
-        contents=f"Lead data:\n{json.dumps(lead_data, indent=2)}",
+        contents=_build_user_content(lead_data),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
             response_mime_type="application/json",
