@@ -291,6 +291,11 @@ exactly the kind of mistake that's easy to make when moving fast.
 4. Reconsider the rubric: make Safety/Failure-Handling failures a hard
    gate rather than something that can be averaged away by three good
    scores elsewhere (per the TC07 finding above).
-5. Consider a second LLM call as an independent grounding-check pass on
-   high-value leads specifically (TC11-style), rather than relying solely
-   on the drafting model's own self-assessment.
+5. **Fix duplicate-`lead_id` detection.** Prioritized over adding real
+   message-sending or improving verification-pass visibility, because
+   the worst manifestation found (a genuinely new lead silently never
+   drafted at all, no error, no indication) is worse than a loud crash
+   — a crash tells you something's wrong; a silent skip means you'd
+   never even know a lead was missed unless you went looking for it.
+   `sheets_client.list_pending_leads()` should flag or reject duplicate
+   IDs rather than silently treating the first-seen row as authoritative.
