@@ -32,11 +32,12 @@
   first proposed score.
 - Did not trust the model's self-reported confidence or flags at face
   value: when NC02 (emoji-only context) flagged "Contact SMS is provided
-  as a numeric value rather than a formatted string," I had that checked
-  against the actual input (`+15551110002`, a normally formatted number)
-  and confirmed the flag itself was factually wrong — a reminder that
-  even the system's own flags can contain incorrect reasoning, not just
-  its drafts.
+  as a numeric value rather than a formatted string," I checked it
+  against the actual input myself (`+15551110002`) — it's a string, not
+  a number (it has a `+` prefix, which couldn't even be valid in a
+  numeric type), and it's already properly formatted. The flag's own
+  claim was factually wrong. A reminder that even the system's own
+  flags can contain incorrect reasoning, not just its drafts.
 - Personally ran the real CLI commands (`draft-new`, `review`) myself
   against the live sheet, rather than only reviewing Claude's runs, to
   get genuine non-developer-execution evidence.
@@ -74,3 +75,13 @@
 - Prioritizing "add retry/backoff to the live CLI" as the top item in the
   next two-week iteration plan, based on hitting a real transient API
   failure (a live `503`) during actual testing, not a hypothetical.
+- Choosing manual-trigger-only for the GitHub Actions workflow over an
+  automatic schedule, to avoid burning the free-tier quota on unattended
+  runs that would mostly find nothing new.
+- Initially proposed hardcoding the business type ("you are a surplus
+  recovery business") directly into the system prompt for more
+  consistent framing. After Claude flagged that this would break the
+  system's general-purpose design and risk reintroducing grounding
+  violations for unrelated leads, I agreed to use config
+  (`BUSINESS_DESCRIPTION`) instead — a case of accepting pushback on my
+  own idea rather than just going with what I first suggested.
