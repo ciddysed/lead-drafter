@@ -41,6 +41,12 @@ Rules you must follow:
    person is still living) directly in the message to the lead — keep
    those internal via the flags field only, and let the human reviewer
    decide how to handle it.
+8. If a business description is provided below, you may reference what
+   the business does in general terms. This does NOT relax rule 1: only
+   state specifics about THIS lead's own situation (amounts, dates,
+   locations) that are explicitly present in their lead data. A business
+   description describes the sender, not license to assume every lead's
+   circumstances match it.
 
 Return ONLY valid JSON in this exact shape, nothing else:
 {
@@ -65,6 +71,12 @@ def _build_user_content(lead_data: dict) -> str:
     if config.company_name or config.sender_name:
         identity = {"company_name": config.company_name, "sender_name": config.sender_name}
         parts.append(f"Sender identity (sign off with this, if natural):\n{json.dumps(identity, indent=2)}")
+    if config.business_description:
+        parts.append(
+            "Business description (what the sender does -- you may reference "
+            f"this in general terms, but rule 1 still applies to lead-specific "
+            f"claims):\n{config.business_description}"
+        )
     return "\n\n".join(parts)
 
 

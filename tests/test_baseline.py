@@ -26,3 +26,15 @@ def test_sender_identity_omitted_when_not_configured(monkeypatch):
     monkeypatch.setattr(config, "sender_name", "")
     content = _build_naive_content(SAMPLE_LEAD)
     assert "Sender" not in content
+
+
+def test_business_description_included_when_configured(monkeypatch):
+    monkeypatch.setattr(config, "business_description", "Helps homeowners recover unclaimed surplus funds.")
+    content = _build_naive_content(SAMPLE_LEAD)
+    assert "Helps homeowners recover unclaimed surplus funds." in content
+
+
+def test_business_description_omitted_when_not_configured(monkeypatch):
+    monkeypatch.setattr(config, "business_description", "")
+    content = _build_naive_content(SAMPLE_LEAD)
+    assert "Business:" not in content
