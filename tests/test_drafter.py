@@ -40,6 +40,18 @@ def test_sender_identity_omitted_when_not_configured(monkeypatch):
     assert "Sender identity" not in content
 
 
+def test_business_description_included_when_configured(monkeypatch):
+    monkeypatch.setattr(config, "business_description", "Helps homeowners recover unclaimed surplus funds.")
+    content = drafter._build_user_content(SAMPLE_LEAD)
+    assert "Helps homeowners recover unclaimed surplus funds." in content
+
+
+def test_business_description_omitted_when_not_configured(monkeypatch):
+    monkeypatch.setattr(config, "business_description", "")
+    content = drafter._build_user_content(SAMPLE_LEAD)
+    assert "Business description" not in content
+
+
 @patch("lead_drafter.drafter._call_openai")
 def test_low_confidence_triggers_review(mock_call, monkeypatch):
     monkeypatch.setattr(config, "llm_provider", "openai")

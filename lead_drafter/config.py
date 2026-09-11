@@ -28,6 +28,14 @@ class Config:
     # falls back to signing off with no name, same as before, if left blank.
     company_name: str = os.getenv("COMPANY_NAME", "")
     sender_name: str = os.getenv("SENDER_NAME", "")
+    # What the business actually does -- also system-wide config, not a
+    # prompt hardcode. Kept separate from the SYSTEM_PROMPT itself so the
+    # drafting logic stays business-agnostic: swapping industries is a
+    # config change, not a code change. The model is told it may reference
+    # this, but grounding rule 1 still applies to lead-specific claims --
+    # this describes the sender, not an excuse to assume every lead's
+    # situation matches it.
+    business_description: str = os.getenv("BUSINESS_DESCRIPTION", "")
 
     def validate(self):
         missing = []
