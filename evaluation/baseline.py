@@ -24,6 +24,8 @@ def _build_naive_content(lead_data: dict) -> str:
     if config.company_name or config.sender_name:
         identity = {"company_name": config.company_name, "sender_name": config.sender_name}
         content += f"\n\nSender: {json.dumps(identity)}"
+    if config.business_description:
+        content += f"\n\nBusiness: {config.business_description}"
     return content
 
 
