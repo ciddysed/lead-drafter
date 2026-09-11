@@ -175,17 +175,25 @@ on the `lead-drafter` repo for full detail):
    would crash showing any lead with non-ASCII content, not just the eval
    script.
 
-**4 real design changes**, made in response to Day-4 testing with inputs
+**5 real design changes**, made in response to Day-4 testing with inputs
 not in `test_cases.json` (extremely long context, emoji-only context,
 duplicate names/different lead_ids, an explicit opt-out request, an
-absurd numeric value, and a fresh new lead added after the fact):
-- **Opt-out hard-stop**: a lead explicitly saying "stop contacting me"
-  got a blank draft, but only because the LLM happened to decide that on
-  its own — nothing in the code guaranteed it. Added a deterministic
-  keyword check that hard-stops before the LLM is even called, matching
-  the existing empty-lead guard's reliability, since this has real
-  compliance weight (CAN-SPAM/TCPA-style requests shouldn't depend on a
-  model "usually" behaving).
+absurd numeric value, and a fresh new lead added after the fact). Listed
+in the order I'd actually prioritize them, most important first:
+- **Opt-out hard-stop** (the most important of these): a lead explicitly
+  saying "stop contacting me, remove me from your list" got a blank
+  draft during testing, but only because the LLM happened to decide
+  that on its own — nothing in the code guaranteed it. This category of
+  mistake is different from an ordinary quality miss: an opt-out request
+  is legally binding (CAN-SPAM/TCPA-style), and a single failure could
+  mean real legal consequences, not just a worse draft a human catches
+  on review. No LLM call can ever be mathematically guaranteed to behave
+  identically every time, even one that "usually" gets it right — so the
+  fix wasn't a better prompt, it was a deterministic keyword check that
+  hard-stops *before* the LLM is even called, matching the existing
+  empty-lead guard's reliability. This converts "probably behaves
+  correctly" into "certainly behaves correctly" for the one category of
+  mistake where that distinction actually matters.
 - **Gap-messaging rule**: added an explicit system-prompt rule
   distinguishing gaps safe to address directly in the message (a missing
   contact method — now the draft proactively asks for it) from gaps that
@@ -211,10 +219,34 @@ absurd numeric value, and a fresh new lead added after the fact):
   it. Verified against the real API: the check ran, found both
   regenerated drafts genuinely grounded, and confirmed (rather than
   just assumed) the original auto-approve decision was correct.
+- **Business description config**: considered and rejected hardcoding
+  "you are a surplus recovery business" directly into `SYSTEM_PROMPT`
+  for more consistent framing — that would have broken the system's
+  general-purpose design (any individualized outbound lead outreach,
+  not just this niche) and risked reintroducing grounding violations,
+  since a lead with no surplus-related context would still get framed
+  around surplus funds regardless of their actual data. Added
+  `BUSINESS_DESCRIPTION` as config instead, with an explicit rule that
+  the model may reference it in general terms but grounding still
+  applies to lead-specific claims. Verified against the real API on two
+  contrasting leads: one with real surplus context stated the specific
+  grounded fact; one with thin/empty context referenced the business in
+  hedged, general terms without claiming that specific lead had a
+  surplus situation.
 
 **Verified, not just assumed:** two leads with identical names
 ("Maria Santos") but different `lead_id`s never got conflated by the
 sheet lookup — checked directly rather than taken on faith.
+
+**Data hygiene caught mid-project:** a mis-paste during live testing put
+what looked like real personal data (a real name, a specific small-town
+location, and a non-synthetic phone number format) into the `Leads`
+sheet. It was caught before it was referenced in any documentation or
+demo material, and removed immediately from both the `Leads` and
+`Drafts` tabs (the generated draft had already echoed the name/location
+into message text). Worth naming explicitly: synthetic-data discipline
+needs an actual check at input time, not just an intention — this is
+exactly the kind of mistake that's easy to make when moving fast.
 
 **Known limitations, chosen not to fix in this scope:**
 - **Self-reported confidence is still not fully independently verified.**
@@ -225,12 +257,16 @@ sheet lookup — checked directly rather than taken on faith.
   checking another LLM call, not a deterministic ground truth. Still the
   single most important limitation to be upfront about.
 - **Duplicate `lead_id` rows in the `Leads` tab aren't detected.** Found
-  by accident during Day-4 testing (an accidental double data-entry) —
-  the system drafted the same lead twice instead of flagging the
-  conflict, and `sheets_client.get_lead()` would silently return only
-  the first match if ever called elsewhere. Lower severity than the
-  fixes above (a data-entry mistake, not a compliance or fabrication
-  risk) — documented rather than fixed, given limited remaining time.
+  twice by accident, in two different failure modes: once where two
+  rows shared an ID and the system drafted both (a harmless double-
+  draft), and once where a genuinely new lead reused an ID that already
+  had a draft logged — that lead was silently never drafted at all, with
+  no error or indication anything was skipped. The second case is worse:
+  a real lead just gets dropped, silently. `sheets_client.get_lead()`
+  would also silently return only the first match if ever called
+  elsewhere. Lower severity than the fixes above (a data-entry mistake,
+  not a compliance or fabrication risk) — documented rather than fixed,
+  given limited remaining time.
 - The production CLI (`draft-new`) still has no retry/backoff on
   transient API errors — it logs and skips (by design, to avoid silently
   hanging or burning quota on retries), but that means a temporary
