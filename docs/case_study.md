@@ -2,9 +2,20 @@
 
 ## User and problem
 
-See `workflow_map.md` for full detail. Short version: a solo rep/small
-business owner manually drafts every new lead's first outreach message,
-which doesn't scale and produces inconsistent quality.
+The target user is a solo sales rep or small business owner personally
+handling new-lead outreach, without a dedicated copywriting or marketing
+team. This is a real pattern from professional lead-qualification work
+— rebuilt here from scratch with original code and 100% synthetic data.
+
+Every new lead currently gets a manually written or lightly templated
+first email/SMS directly from the rep. That doesn't scale and produces
+inconsistent quality:
+- Every new lead requires manual attention before first contact goes
+  out — this doesn't scale past a handful of leads per day without
+  either quality dropping (generic templates) or response time slowing
+  (a growing backlog).
+- Message quality varies by which rep is on shift, how busy they are,
+  and how much of the lead's context they actually took the time to read.
 
 This generalizes beyond this specific niche: the underlying pattern
 (lead record → personalized draft → confidence/flag-based human review
@@ -18,7 +29,23 @@ per-contact personalization-plus-review pattern specifically.
 
 ## Existing workflow and bottleneck
 
-Manual, per-lead message writing — see workflow_map.md's table.
+The manual workflow being replaced, step by step:
+
+| Step | What happens today |
+|---|---|
+| Trigger | A new lead is added to the CRM/spreadsheet |
+| Input | Whatever data was captured about the lead (name, situation, contact info — often incomplete) |
+| Judgment | The rep decides what to say, drawing on whatever context they personally know |
+| Tool | The rep writes the message directly, or copies a static template and edits it |
+| Approval | Self-approved — the rep is both the writer and the sender |
+| Output | A personalized (or lightly templated) first-contact message |
+| Exception | Thin or missing data gets skipped or delayed; a rep running low on time sends a generic template instead |
+
+Success metric for this rebuild: rubric-score improvement over a naive
+baseline (specifically on the Grounding and Safety dimensions — see
+Results below), plus correct review-queue routing, where every test
+case with a real flag-worthy issue gets routed to a human rather than
+auto-approved.
 
 ## Scope decisions and non-goals
 
@@ -47,8 +74,8 @@ Manual, per-lead message writing — see workflow_map.md's table.
   than requiring me to enumerate every possible flag-worthy condition
   in advance — traded off against the model's confidence self-reports
   being unverified (a documented limitation).
-- **No LLM-graded evaluation:** rubric scoring in this case study was done
-  by hand against `evaluation/rubric.md`, not by asking an LLM to grade
+- **No LLM-graded evaluation:** rubric scoring in this case study was
+  done by hand against a written rubric, not by asking an LLM to grade
   its own (or another LLM's) output — avoided introducing a second,
   unvalidated LLM judgment layer into a 5-day scope.
 - **No RAG:** considered and deliberately rejected. RAG solves "there's
@@ -62,15 +89,25 @@ Manual, per-lead message writing — see workflow_map.md's table.
 
 ## Work delegated to AI and judgment retained by humans
 
-See `ai_collaboration_note.md` for the full breakdown.
+Claude (Anthropic) was used throughout as a pair-programmer: first-draft
+code, first-draft synthetic test cases, and first-draft documentation
+structure. Judgment retained personally: every scoring decision in the
+Results section below, every design trade-off in this document, which
+AI-proposed fixes to accept or push back on, and which real observations
+went into this case study and the accompanying AI Collaboration Note.
+The full breakdown of what was verified, what was rejected or corrected,
+and which decisions were personally owned is in that separate submitted
+document.
 
 ## Results
 
-Ran all 12 synthetic test cases through both the naive baseline and the
-real system (Gemini `gemini-3.5-flash-lite`), hand-scored against
-`evaluation/rubric.md` (0-2 per dimension: Grounding, Tone & Channel Fit,
-Failure Handling, Safety; 6/8+ = pass). Full detail in
-`evaluation/results.csv`.
+Ran all 12 synthetic test cases through both a naive baseline (a single
+generic prompt, representing simple ChatGPT-style use) and the real
+system (Google Gemini, model `gemini-3.5-flash-lite`), hand-scored
+against a 4-dimension rubric (Grounding, Tone & Channel Fit, Failure
+Handling, Safety — each 0-2, 6/8+ counts as a pass). Full case-by-case
+detail, including every draft's actual text, is in the accompanying
+Evaluation Package document.
 
 **Baseline: 5/12 pass (42%). System: 12/12 pass (100%).**
 
@@ -156,8 +193,7 @@ anyone trying to build and evaluate an LLM system on a free API tier —
 budget for a paid tier before real production use.
 
 **7 real bugs found and fixed** during actual live runs against the real
-Google Sheet and real API, each with root-cause analysis (see PR history
-on the `lead-drafter` repo for full detail):
+Google Sheet and real API, each with root-cause analysis:
 1. `sheets_client.log_draft()` silently skipped writing the Drafts header
    row on the very first real write — its "is the sheet empty?" check
    didn't hold for a freshly-created (but not byte-empty) tab.

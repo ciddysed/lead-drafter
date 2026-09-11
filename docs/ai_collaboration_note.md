@@ -26,7 +26,7 @@
 ## How I verified AI-generated results
 
 - Ran the full eval against my own real Gemini key and Google Sheet, then
-  hand-scored all 12 draft outputs against `evaluation/rubric.md` myself —
+  hand-scored all 12 draft outputs against the written rubric myself —
   reading the actual email/SMS text and matching it to the rubric's
   specific 0/1/2 wording, not going by gut feel or accepting Claude's
   first proposed score.
