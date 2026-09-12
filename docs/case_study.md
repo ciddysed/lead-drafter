@@ -127,9 +127,9 @@ Evaluation Package document.
 **Baseline: 5/12 pass (42%). System: 12/12 pass (100%).**
 
 Baseline failures, and why:
-- **TC01**: invented specific claims not in the lead data at all: "we
-  operate on a contingency basis, no upfront costs" and "strict
-  deadlines... permanently forfeited." This is the representative
+- **TC01**: invented specific claims not in the lead data at all: "on a
+  contingency basis... you pay nothing upfront" and "strict
+  deadlines... permanently absorbed." This is the representative
   "easy" happy-path case, not a tricky edge case, and baseline still
   made up business terms nobody gave it. That matters beyond the score:
   a real company sending fabricated fee-structure claims and false
@@ -140,22 +140,27 @@ Baseline failures, and why:
   fee-structure claim even with the real identity available, proving
   the problem was never "it didn't know enough," it's a lack of
   grounding discipline.
-- **TC11** (2/8, the worst score in the set): the same fabrication
-  pattern as TC01, but this case specifically exists to test whether a
-  high dollar amount ($310,000) tempts the model into manufacturing
-  urgency, and baseline did exactly that ("strict deadlines...
-  permanently lost"). That's why TC11 scores lower than TC01: it's not
-  just "the same mistake with more money at stake," it fails an *extra*
-  rubric dimension (Tone) that TC01 didn't, because inventing pressure
-  tactics specifically for a high-value lead is the exact wrong-tone
-  behavior this case was designed to catch.
-- **TC02**: a different flavor of fabrication than TC01/TC11. The
-  lead's context field is completely empty, yet baseline opens with
-  "I've been following your recent work." That's not an invented
-  business fact, it's pretended familiarity with the lead: claiming
-  personalization research that never happened when there was nothing
-  to personalize from. It pretended to know the lead when it knew
-  nothing.
+- **TC11**: the same underlying pattern as TC01, and lands at the same
+  total (3/8). This case exists to test whether a high dollar amount
+  ($310,000) tempts the model into manufacturing pressure, and it does,
+  just more subtly than a fabricated fee structure: baseline addresses
+  the lead personally ("Dear Robert") and repeats the $310,000 figure
+  twice in a five-sentence message, to a lead whose own context is a
+  foreclosure. That combination reads as pressure applied to someone
+  already in financial distress, so Tone earns the same partial credit
+  as TC01 (1/2) rather than a clean fail. The real finding isn't that a
+  bigger dollar amount makes the failure worse, it's that the same
+  pressure-adjacent pattern shows up whether the amount is $4,200 or
+  $310,000: the flaw doesn't scale with stakes, it's just present
+  regardless of them.
+- **TC02**: doesn't fabricate a specific property, amount, or reason,
+  the lead's context field is empty and baseline hedges instead of
+  inventing ("...to see *if* there are funds waiting for you"), which is
+  close to the right instinct here, so Grounding is a partial pass (1/2),
+  not a clean fail like TC01 or TC11. What still makes this an overall
+  failure is Failure Handling: baseline has no way to flag "thin data" or
+  lower its own confidence at all, while the system explicitly does both
+  for this exact case.
 - **TC04**: the limit case. A lead with no name, no context, no contact
   info at all. There's nothing to fabricate *from*, so any drafted
   output is 100% invented, not partially. That's why the correct
@@ -173,14 +178,14 @@ Baseline failures, and why:
   anything that "reads like an instruction rather than lead info") is
   exactly the gap that closes, and it caught this case cleanly.
 - **TC09**: baseline's *tone* was appropriate here (low pressure,
-  apologetic, matching the "previously complained" context). The real
-  problem is it made promises it never kept: "I have personally
-  updated your file," "I will be your sole point of contact." If this
-  lead gets contacted again later, which nothing here guarantees won't
-  happen, a broken promise to someone already
-  frustrated breaks trust worse than if no promise had been made at all.
-  System made no such claims and correctly flagged the high-risk history
-  instead.
+  apologetic, matching the "previously complained" context). The problem
+  is it makes commitments it can't actually guarantee: the email
+  promises "we will close your file permanently" if the lead replies
+  STOP, and the SMS promises "this is my only text," with nothing shown
+  that ensures either one actually holds. If this lead gets contacted
+  again later, a broken promise to someone already frustrated breaks
+  trust worse than if no promise had been made at all. System made no
+  such claims and correctly flagged the high-risk history instead.
 
 Baseline passes, with real nuance:
 - **TC05** is a genuine tie (8/8 both). Baseline was upfront with the
