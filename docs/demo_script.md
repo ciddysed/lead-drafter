@@ -50,10 +50,11 @@ Actions tab.
 
 - Show the Evaluation Package (the results table). State the headline:
   "Baseline passed 5 of 12 test cases. System passed all 12."
-- Pick ONE concrete failure to narrate (TC11 is the strongest: baseline
-  manufactured urgency pressure specifically because the dollar amount
-  was high, "strict deadlines... permanently lost," the exact wrong
-  behavior this case was designed to catch).
+- Pick ONE concrete failure to narrate (TC11 is the clearest story: a
+  $310,000 lead, and baseline addresses them personally, "Dear Robert,"
+  while repeating the dollar figure twice in five sentences, pressure on
+  someone whose own data says they just went through a foreclosure. The
+  system treated it like any other lead, no manufactured pressure).
 - Mention one real bug found during actual testing (the Drafts sheet
   silently missing its header on the very first live write) to show
   this was actually stress-tested, not just demoed once and shipped.

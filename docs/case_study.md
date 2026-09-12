@@ -140,15 +140,21 @@ Baseline failures, and why:
   fee-structure claim even with the real identity available, proving
   the problem was never "it didn't know enough," it's a lack of
   grounding discipline.
-- **TC11** (2/8, the worst score in the set): the same fabrication
-  pattern as TC01, but this case specifically exists to test whether a
-  high dollar amount ($310,000) tempts the model into manufacturing
-  urgency, and baseline did exactly that ("strict deadlines...
-  permanently lost"). That's why TC11 scores lower than TC01: it's not
-  just "the same mistake with more money at stake," it fails an *extra*
-  rubric dimension (Tone) that TC01 didn't, because inventing pressure
-  tactics specifically for a high-value lead is the exact wrong-tone
-  behavior this case was designed to catch.
+- **TC11**: the same underlying pattern as TC01, and lands at the same
+  total (3/8), not lower as an earlier version of this writeup claimed
+  (that version quoted TC01's "strict deadlines...permanently absorbed"
+  line for this case, but that phrase never actually appears in TC11's
+  own text). This case exists to test whether a high dollar amount
+  ($310,000) tempts the model into manufacturing pressure, and it still
+  does, just more subtly: baseline addresses the lead personally ("Dear
+  Robert") and repeats the $310,000 figure twice in a five-sentence
+  message, to a lead whose own context is a foreclosure. That combination
+  reads as pressure applied to someone already in financial distress, so
+  Tone earns the same partial credit as TC01 (1/2) rather than a clean
+  fail. The real finding isn't that a bigger dollar amount makes the
+  failure worse, it's that the same pressure-adjacent pattern shows up
+  whether the amount is $4,200 or $310,000: the flaw doesn't scale with
+  stakes, it's just present regardless of them.
 - **TC02**: a different flavor of fabrication than TC01/TC11. The
   lead's context field is completely empty, yet baseline opens with
   "I've been following your recent work." That's not an invented
