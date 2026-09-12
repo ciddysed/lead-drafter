@@ -12,8 +12,8 @@ Actions tab.
   inconsistent under time pressure."
 - "The baseline for comparison is simple ChatGPT-style use: one generic
   prompt, no rules." (Show one baseline example on screen. TC01's
-  baseline output with the invented "contingency basis, no upfront
-  costs" claim highlighted.)
+  baseline output with the invented "strict deadlines... permanently
+  absorbed" claim highlighted.)
 - "Even on the easiest case, it invents business terms nobody gave it.
   That's not a quality nitpick. A real business sending fabricated fee
   claims is a trust and legal-exposure risk."

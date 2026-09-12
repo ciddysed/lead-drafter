@@ -45,11 +45,13 @@
 ## Important results I rejected or manually corrected
 
 - My own first-pass rubric score for TC04 (a lead with zero data at all)
-  gave the baseline all 2s. After re-reading the actual baseline output
-  (it drafted a full, polished-sounding pitch for a lead with no name,
-  no context, and no contact info whatsoever) I corrected that to 3/8
-  (Grounding=0, Failure Handling=0), since a draft fabricated from
-  literally nothing shouldn't score as if nothing went wrong.
+  gave the baseline credit it didn't deserve on Grounding and Failure
+  Handling. After re-reading the actual baseline output (it drafted a
+  full, polished-sounding pitch for a lead with no name, no context, and
+  no contact info whatsoever) I corrected the final score to 3/8
+  (Grounding=0, Tone=1, Failure Handling=0, Safety=2), since a draft
+  fabricated from literally nothing shouldn't score as if nothing went
+  wrong.
 - Confirmed the NC02 flag-accuracy issue above by checking the raw input
   data directly rather than accepting the system's own flag text as true.
 
