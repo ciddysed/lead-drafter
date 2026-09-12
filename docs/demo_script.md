@@ -23,7 +23,10 @@ Actions tab.
 - "In a real deployment, new leads would land in your actual CRM. I'm
   using a Google Sheet to simulate that here: it's a real external
   system the code reads and writes to, not a mocked database, just
-  lightweight enough to inspect directly for this project."
+  lightweight enough to inspect directly for this project. Two tabs:
+  `Leads` is the input, where new leads get added; `Drafts` is the
+  output, where the system logs every generated draft along with its
+  confidence, flags, and review status."
 - Show the Google Sheet's `Leads` tab. Add one new synthetic lead live
   (or point to one already there).
 - Switch to the GitHub Actions tab. Click "Run workflow." Show it
