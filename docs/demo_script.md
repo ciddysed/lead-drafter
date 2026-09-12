@@ -49,7 +49,7 @@ Actions tab.
   behavior this case was designed to catch).
 - Mention one real bug found during actual testing (the Drafts sheet
   silently missing its header on the very first live write) to show
-  this was genuinely stress-tested, not just demoed once and shipped.
+  this was actually stress-tested, not just demoed once and shipped.
 
 ## 4:00 to 4:45: Results and the most important limitation
 
