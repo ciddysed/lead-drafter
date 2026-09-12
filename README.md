@@ -32,9 +32,11 @@ is direct evidence the system actually works, with nothing to install:
   logic executing against the real Google Sheet and a real LLM. Full
   run history (including earlier failures found and fixed) is on the
   [Actions tab](https://github.com/ciddysed/lead-drafter/actions).
-- **The live Google Sheet** (synthetic leads only): shared as a
-  read-only link in the submission, showing the actual `Leads` and
-  `Drafts` tabs the run above produced.
+- **The live Google Sheet** (synthetic leads only, so editing is
+  low-risk): shared with edit access in the submission, showing the
+  actual `Leads` and `Drafts` tabs the run above produced. Feel free to
+  add a synthetic lead of your own; note that editing the sheet alone
+  doesn't trigger drafting, that still needs a run from the Actions tab.
 - **The demo video**, walking through a live trigger end to end.
 
 If you want to actually run the code yourself with your own API key and
