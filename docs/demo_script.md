@@ -20,6 +20,10 @@ Actions tab.
 
 ## 0:50 to 2:00: Live flow, real input to output
 
+- "In a real deployment, new leads would land in your actual CRM. I'm
+  using a Google Sheet to simulate that here: it's a real external
+  system the code reads and writes to, not a mocked database, just
+  lightweight enough to inspect directly for this project."
 - Show the Google Sheet's `Leads` tab. Add one new synthetic lead live
   (or point to one already there).
 - Switch to the GitHub Actions tab. Click "Run workflow." Show it
