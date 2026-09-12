@@ -5,3 +5,4 @@ __pycache__/
 .venv/
 venv/
 CLAUDE.md
+docs/demo_script.md
