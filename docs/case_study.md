@@ -60,11 +60,19 @@ auto-approved.
 
 ## Architecture and major trade-offs
 
-- **Python, not a no-code tool (n8n/Make):** the assessment specifically
-  asks for API integrations and automation scripts in Python/JS, so I
-  chose to build the core logic in code rather than wire together
-  no-code nodes, even though I have real n8n experience I could have
-  leaned on instead.
+- **Python, not a no-code tool (n8n/Make):** the brief's accepted
+  formats include exported no-code automation, so n8n was not off the
+  table. Chose Python anyway, deliberately, because the highest-weighted
+  parts of this assessment (System Architecture, Evaluation and Learning
+  Loop) reward exactly what code gives you that a visual workflow tool
+  makes harder: an automated regression suite (34 pytest tests, run in
+  under a second), diffable version-controlled history with a real CI
+  gate before every merge, and a repeatable evaluation harness producing
+  actual numbers. The prompt engineering and business logic would
+  transfer to n8n fine, since that content is model-agnostic either way;
+  the testing and engineering discipline would not transfer as cleanly.
+  This was a deliberate trade-off, not a requirement I was following,
+  and I have real n8n experience I could have used instead.
 - **Structured JSON output, not free text:** makes the confidence/flags/
   drafts reliably parseable downstream, rather than regex-parsing a
   freeform response.
