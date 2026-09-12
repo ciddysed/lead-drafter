@@ -62,17 +62,22 @@ auto-approved.
 
 - **Python, not a no-code tool (n8n/Make):** the brief's accepted
   formats include exported no-code automation, so n8n was not off the
-  table. Chose Python anyway, deliberately, because the highest-weighted
-  parts of this assessment (System Architecture, Evaluation and Learning
-  Loop) reward exactly what code gives you that a visual workflow tool
-  makes harder: an automated regression suite (34 pytest tests, run in
-  under a second), diffable version-controlled history with a real CI
-  gate before every merge, and a repeatable evaluation harness producing
-  actual numbers. The prompt engineering and business logic would
-  transfer to n8n fine, since that content is model-agnostic either way;
-  the testing and engineering discipline would not transfer as cleanly.
-  This was a deliberate trade-off, not a requirement I was following,
-  and I have real n8n experience I could have used instead.
+  table, and I have real n8n experience I could have used instead. The
+  core mechanics here (calling an LLM, reading/writing a sheet, looping
+  through test cases, routing on a confidence threshold) would build
+  fine in n8n; that part isn't the reason for the choice. The actual
+  reason is narrower: as this system kept changing throughout the
+  project (new rules, a hard-stop guard, a second verification call),
+  I wanted a cheap way to prove each change didn't quietly break
+  something that used to work. A 34-test pytest suite runs in under a
+  second and catches that automatically; an n8n workflow has no native
+  equivalent, so confirming the same thing means manually re-running it
+  against the test cases and eyeballing the output every time. Code
+  also diffs cleanly between versions, so a reviewer (or I, three days
+  later) can see exactly what logic changed; an exported n8n workflow is
+  JSON, which is far harder to read a meaningful diff from. Neither
+  factor made n8n incapable of the job, they made maintaining and
+  re-verifying the system, as it kept evolving, more expensive.
 - **Structured JSON output, not free text:** makes the confidence/flags/
   drafts reliably parseable downstream, rather than regex-parsing a
   freeform response.
